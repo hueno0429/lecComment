@@ -9,33 +9,33 @@ st.set_page_config(page_title="Lecture System", layout="wide", page_icon="📊")
 st_autorefresh(interval=5000, key="datarefresh")
 
 # --- 2. スプレッドシート接続 ---
-URL = "https://docs.google.com/spreadsheets/d/1rJBb19fJkxVnX69zzxVhBqUiXABFEQzPhihN1-0Fe-Y/edit?usp=sharing"
-conn = st.connection("gsheets", type=GSheetsConnection)
+CSV_URL_SHEET1="https://docs.google.com/spreadsheets/d/e/2PACX-1vTgFq_RKoaymkDWQ1K0vQwykNyQ3yJLnpJgy-wr4Rek8b613obbQiOhUhkqoYC1PBpStlNyYv3xCYju/pub?gid=0&single=true&output=csv"
+CSV_URL_COMMENT="https://docs.google.com/spreadsheets/d/e/2PACX-1vTgFq_RKoaymkDWQ1K0vQwykNyQ3yJLnpJgy-wr4Rek8b613obbQiOhUhkqoYC1PBpStlNyYv3xCYju/pub?gid=1407702637&single=true&output=csv"
 
 def get_data():
     try:
-        # worksheet="0" は「一番左のタブ」という意味
-        df_status = conn.read(spreadsheet=URL, worksheet="0", header=None, ttl=0)
+        # pandasで直接CSVを読み込む（これが一番エラーが起きにくいです）
+        df_status = pd.read_csv(CSV_URL_SHEET1, header=None)
         
         # A1セルの判定
         val = str(df_status.iloc[0, 0]).strip().upper()
         status = (val == "TRUE")
         
+        # B1, C1の取得
         good_count = df_status.iloc[0, 1] if df_status.shape[1] > 1 else 0
         bad_count = df_status.iloc[0, 2] if df_status.shape[1] > 2 else 0
         
-        # worksheet="1" は「左から2番目のタブ」という意味
-        df_comments = conn.read(spreadsheet=URL, worksheet="1", header=None, ttl=0)
-        
-        if df_comments is not None and not df_comments.empty:
+        # コメントの読み込み
+        df_comments = pd.read_csv(CSV_URL_COMMENT, header=None)
+        if not df_comments.empty:
             comments = df_comments[0].dropna().tolist()
         else:
             comments = []
             
         return status, good_count, bad_count, comments
     except Exception as e:
-        # ここにエラーの詳細が出るようにします
-        st.sidebar.error(f"エラー詳細: {e}")
+        # エラーが出た場合はサイドバーに表示
+        st.sidebar.error(f"読み込みエラー: {e}")
         return False, 0, 0, []
 
 current_status, good_val, bad_val, all_comments = get_data()
@@ -102,6 +102,7 @@ else:
     st.divider()
     st.text_input("質問・コメント")
     st.button("送信")
+
 
 
 
