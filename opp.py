@@ -14,25 +14,19 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_data():
     try:
-        # sheet1 を読み込み
-        df_status = conn.read(spreadsheet=URL, worksheet="sheet1", header=None, ttl=0)
+        # worksheet="0" は「一番左のタブ」という意味
+        df_status = conn.read(spreadsheet=URL, worksheet="0", header=None, ttl=0)
         
-        if df_status is not None and not df_status.empty:
-            # 実際に読み取った値を抽出
-            raw_val = df_status.iloc[0, 0]
-            val = str(raw_val).strip().upper()
-            status = (val == "TRUE")
-            
-            # デバッグ用にサイドバーに表示（確認後消してOK）
-            # st.sidebar.write(f"読み取り値: '{raw_val}' -> 判定: {status}")
-            
-            good_count = df_status.iloc[0, 1] if df_status.shape[1] > 1 else 0
-            bad_count = df_status.iloc[0, 2] if df_status.shape[1] > 2 else 0
-        else:
-            status, good_count, bad_count = False, 0, 0
+        # A1セルの判定
+        val = str(df_status.iloc[0, 0]).strip().upper()
+        status = (val == "TRUE")
         
-        # comment タブを読み込み
-        df_comments = conn.read(spreadsheet=URL, worksheet="comment", header=None, ttl=0)
+        good_count = df_status.iloc[0, 1] if df_status.shape[1] > 1 else 0
+        bad_count = df_status.iloc[0, 2] if df_status.shape[1] > 2 else 0
+        
+        # worksheet="1" は「左から2番目のタブ」という意味
+        df_comments = conn.read(spreadsheet=URL, worksheet="1", header=None, ttl=0)
+        
         if df_comments is not None and not df_comments.empty:
             comments = df_comments[0].dropna().tolist()
         else:
@@ -40,8 +34,8 @@ def get_data():
             
         return status, good_count, bad_count, comments
     except Exception as e:
-        # エラーが出ている場合はサイドバーに赤文字で表示
-        st.sidebar.error(f"エラー発生: {e}")
+        # ここにエラーの詳細が出るようにします
+        st.sidebar.error(f"エラー詳細: {e}")
         return False, 0, 0, []
 
 current_status, good_val, bad_val, all_comments = get_data()
@@ -108,5 +102,6 @@ else:
     st.divider()
     st.text_input("質問・コメント")
     st.button("送信")
+
 
 
