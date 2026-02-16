@@ -3,6 +3,46 @@ from streamlit_autorefresh import st_autorefresh
 import pandas as pd  # CSV作成用に必要
 from datetime import datetime
 
+import streamlit as st
+from streamlit_autorefresh import st_autorefresh
+
+# --- 1. 管理者認証の初期化 ---
+if "is_admin" not in st.session_state:
+    st.session_state["is_admin"] = False
+
+# --- 2. サイドバーにログインフォームを作成 ---
+with st.sidebar:
+    st.title("管理者メニュー")
+    if not st.session_state["is_admin"]:
+        password = st.text_input("パスワードを入力してください", type="password")
+        if st.button("ログイン"):
+            # 以前おっしゃっていたパスワード「Henoheno2236」を使用
+            if password == "Henoheno2236":
+                st.session_state["is_admin"] = True
+                st.rerun() # 画面を更新して管理者モードを反映
+            else:
+                st.error("パスワードが違います。ユーザーモードで動作します。")
+    else:
+        if st.button("ログアウト"):
+            st.session_state["is_admin"] = False
+            st.rerun()
+
+# --- 3. 操作の制限（ここが重要） ---
+# ここから下の「操作ボタン」などを、管理者のみ有効にする
+if st.session_state["is_admin"]:
+    st.success("現在は【管理者モード】です。操作が可能です。")
+    
+    # ここに「削除ボタン」や「設定変更」など、管理者にしかさせたくない処理を書く
+    if st.button("全コメントを削除する"):
+        st.write("削除を実行しました（例）")
+
+else:
+    st.info("現在は【ユーザーモード】です。閲覧のみ可能です。")
+    
+    # ユーザーモードでは操作ボタンを無効化（表示しない）
+    st.warning("操作を行うには、左側のサイドバーからログインしてください。")
+
+
 st.set_page_config(page_title="授業リアクション", layout="centered")
 
 # --- 1. 全ユーザー共通のデータを作成 ---
@@ -126,4 +166,5 @@ if 'show_student_ui' in locals() and show_student_ui:
         if st.form_submit_button("送信"):
             if new_comment:
                 data["comments"].insert(0, new_comment)
+
                 st.rerun()
