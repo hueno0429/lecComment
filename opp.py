@@ -15,7 +15,7 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def get_data():
     try:
         # 公開状態とカウントを取得
-        df_status = conn.read(spreadsheet=URL, worksheet="シート1", nrows=1, header=None, ttl=0)
+        df_status = conn.read(spreadsheet=URL, worksheet="sheet1", nrows=1, header=None, ttl=0)
         val = str(df_status.iloc[0, 0]).strip().upper()
         status = (val == "TRUE")
         
@@ -23,7 +23,7 @@ def get_data():
         bad_count = df_status.iloc[0, 2] if df_status.shape[1] > 2 else 0
         
         # コメントを取得
-        df_comments = conn.read(spreadsheet=URL, worksheet="コメント", header=None, ttl=0)
+        df_comments = conn.read(spreadsheet=URL, worksheet="comment", header=None, ttl=0)
         if df_comments is not None and not df_comments.empty:
             comments = df_comments[0].dropna().tolist()
         else:
@@ -98,3 +98,4 @@ else:
     st.divider()
     st.text_input("質問・コメント")
     st.button("送信")
+
