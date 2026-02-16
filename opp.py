@@ -29,6 +29,21 @@ def get_status():
         st.sidebar.error(f"スプレッドシート読み取りエラー: {e}")
         return False
 
+def get_data():
+    try:
+        # シート1から公開状態とカウント(B1, C1)を取得
+        df_status = conn.read(spreadsheet=URL, worksheet="0", nrows=1, header=None, ttl=0)
+        status = str(df_status.iloc[0, 0]).strip().upper() == "TRUE"
+        good_count = df_status.iloc[0, 1] if len(df_status.columns) > 1 else 0
+        bad_count = df_status.iloc[0, 2] if len(df_status.columns) > 2 else 0
+        
+        # 「コメント」タブから全コメントを取得
+        df_comments = conn.read(spreadsheet=URL, worksheet="コメント", header=None, ttl=0)
+        comments = df_comments[0].dropna().tolist()
+        return status, good_count, bad_count, comments
+    except:
+        return False, 0, 0, []
+
 # データの取得
 current_status, good_val, bad_val, all_comments = get_data()
 
@@ -113,5 +128,6 @@ else:
     st.divider()
     st.text_input("質問・コメント")
     st.button("送信")
+
 
 
