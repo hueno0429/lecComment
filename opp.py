@@ -16,12 +16,19 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_status():
     try:
-        # シート1のA1セルを読み込む (ttl=0で最新の状態を取得)
-        df = conn.read(spreadsheet=URL, worksheet="シート1", usecols=[0], nrows=1, header=None, ttl=0)
+        # worksheet="0" と指定することで、名前に関係なく一番左のタブを読み込みます
+        df = conn.read(spreadsheet=URL, worksheet="0", usecols=[0], nrows=1, header=None, ttl=0)
+        
+        # 読み取ったデータが空でないか確認
+        if df.empty:
+            return False
+            
+        # 1行1列目の値を文字列として取り出し、大文字にして比較
         val = str(df.iloc[0, 0]).strip().upper()
         return val == "TRUE"
     except Exception as e:
-        # 接続エラー時は安全のため非表示（False）にする
+        # 画面上にエラー内容を表示させて原因を特定する
+        st.sidebar.error(f"スプレッドシート読み取りエラー: {e}")
         return False
 
 # --- 3. 状態の取得 ---
@@ -89,3 +96,4 @@ else:
             st.success(f"送信完了: {comment}")
         else:
             st.warning("内容を入力してください")
+
