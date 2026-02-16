@@ -10,7 +10,7 @@ st_autorefresh(interval=5000, key="datarefresh") # 5秒ごとにチェック
 
 # --- 2. スプレッドシート接続 ---
 # 公開設定にしたスプレッドシートのURLを指定
-URL = "https://docs.google.com/spreadsheets/d/あなたのスプレッドシートID/edit#gid=0"
+URL = "https://docs.google.com/spreadsheets/d/1rJBb19fJkxVnX69zzxVhBqUiXABFEQzPhihN1-0Fe-Y/edit?usp=sharing/edit#gid=0"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_status():
@@ -54,5 +54,6 @@ else:
     user_input = st.text_input("コメントを入力")
     if st.button("送信"):
         st.success("送信されました")
+
 
 
