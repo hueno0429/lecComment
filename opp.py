@@ -9,6 +9,7 @@ st.set_page_config(page_title="Lecture System", layout="wide", page_icon="📊")
 st_autorefresh(interval=5000, key="datarefresh")
 
 # --- 2. スプレッドシート接続 ---
+URL = "https://docs.google.com/spreadsheets/d/1rJBb19fJkxVnX69zzxVhBqUiXABFEQzPhihN1-0Fe-Y/edit?usp=sharing"
 CSV_URL_SHEET1="https://docs.google.com/spreadsheets/d/e/2PACX-1vTgFq_RKoaymkDWQ1K0vQwykNyQ3yJLnpJgy-wr4Rek8b613obbQiOhUhkqoYC1PBpStlNyYv3xCYju/pub?gid=0&single=true&output=csv"
 CSV_URL_COMMENT="https://docs.google.com/spreadsheets/d/e/2PACX-1vTgFq_RKoaymkDWQ1K0vQwykNyQ3yJLnpJgy-wr4Rek8b613obbQiOhUhkqoYC1PBpStlNyYv3xCYju/pub?gid=1407702637&single=true&output=csv"
 
@@ -102,6 +103,7 @@ else:
     st.divider()
     st.text_input("質問・コメント")
     st.button("送信")
+
 
 
 
