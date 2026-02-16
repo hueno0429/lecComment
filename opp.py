@@ -16,7 +16,6 @@ with st.sidebar:
     if not st.session_state["is_admin"]:
         password = st.text_input("パスワードを入力してください", type="password")
         if st.button("ログイン"):
-            # 以前おっしゃっていたパスワード「Henoheno2236」を使用
             if password == "Henoheno2236":
                 st.session_state["is_admin"] = True
                 st.rerun() # 画面を更新して管理者モードを反映
@@ -168,3 +167,4 @@ if 'show_student_ui' in locals() and show_student_ui:
                 data["comments"].insert(0, new_comment)
 
                 st.rerun()
+
