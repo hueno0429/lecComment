@@ -12,23 +12,6 @@ st_autorefresh(interval=5000, key="datarefresh")
 URL = "https://docs.google.com/spreadsheets/d/1rJBb19fJkxVnX69zzxVhBqUiXABFEQzPhihN1-0Fe-Y/edit?usp=sharing"
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-def get_status():
-    try:
-        # worksheet="0" と指定することで、名前に関係なく一番左のタブを読み込みます
-        df = conn.read(spreadsheet=URL, worksheet="0", usecols=[0], nrows=1, header=None, ttl=0)
-        
-        # 読み取ったデータが空でないか確認
-        if df.empty:
-            return False
-            
-        # 1行1列目の値を文字列として取り出し、大文字にして比較
-        val = str(df.iloc[0, 0]).strip().upper()
-        return val == "TRUE"
-    except Exception as e:
-        # 画面上にエラー内容を表示させて原因を特定する
-        st.sidebar.error(f"スプレッドシート読み取りエラー: {e}")
-        return False
-
 def get_data():
     try:
         # シート1から公開状態とカウント(B1, C1)を取得
@@ -130,6 +113,7 @@ else:
     st.divider()
     st.text_input("質問・コメント")
     st.button("送信")
+
 
 
 
