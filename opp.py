@@ -85,6 +85,8 @@ elif view == "admin":
         st.write(f"現在の公開状態: {'🟢 公開中' if current_status else '🔴 非公開'}")
         
         st.divider()
+        st.write(f"👉 [スプレッドシートを編集する]({URL})")
+        
         # モニタリングページへのリンクボタン
         if st.button("📈 リアルタイム統計ページを開く"):
             st.query_params.update(view="monitor")
@@ -109,3 +111,4 @@ else:
     st.divider()
     st.text_input("質問・コメント")
     st.button("送信")
+
