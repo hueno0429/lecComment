@@ -32,7 +32,7 @@ def get_status():
 def get_data():
     try:
         # シート1から公開状態とカウント(B1, C1)を取得
-        df_status = conn.read(spreadsheet=URL, worksheet="0", nrows=1, header=None, ttl=0)
+        df_status = conn.read(spreadsheet=URL, worksheet="0", usecols=[0], nrows=1, header=None, ttl=0)
         status = str(df_status.iloc[0, 0]).strip().upper() == "TRUE"
         good_count = df_status.iloc[0, 1] if len(df_status.columns) > 1 else 0
         bad_count = df_status.iloc[0, 2] if len(df_status.columns) > 2 else 0
@@ -128,6 +128,7 @@ else:
     st.divider()
     st.text_input("質問・コメント")
     st.button("送信")
+
 
 
 
