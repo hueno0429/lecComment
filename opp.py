@@ -88,4 +88,5 @@ else:
         if comment:
             st.success(f"送信完了: {comment}")
         else:
-            st.warning("内容を入力してください")
+            st.warning("内容を入力してください")")
+
