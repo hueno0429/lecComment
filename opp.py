@@ -14,9 +14,13 @@ URL = "https://docs.google.com/spreadsheets/d/あなたのスプレッドシー�
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def get_status():
-    # A1セルの値を取得
-    df = conn.read(spreadsheet=URL, worksheet="0", usecols=[0], nrows=1, header=None)
-    return str(df.iloc[0, 0]).upper() == "TRUE"
+    try:
+        # ttl=0 を追加してキャッシュを残さないようにし、型を文字列として明示的に扱う
+        df = conn.read(spreadsheet=URL, worksheet="0", usecols=[0], nrows=1, header=None, ttl=0)
+        val = str(df.iloc[0, 0]).strip().upper()
+        return val == "TRUE"
+    except:
+        return False
 
 # --- 3. URL判定 ---
 query_params = st.query_params
@@ -50,4 +54,5 @@ else:
     user_input = st.text_input("コメントを入力")
     if st.button("送信"):
         st.success("送信されました")
+
 
