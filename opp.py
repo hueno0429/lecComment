@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 from streamlit_gsheets import GSheetsConnection
@@ -49,3 +50,4 @@ else:
     user_input = st.text_input("コメントを入力")
     if st.button("送信"):
         st.success("送信されました")
+
