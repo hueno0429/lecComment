@@ -5,6 +5,7 @@ from datetime import datetime
 import qrcode
 from io import BytesIO
 import streamlit as st
+from datetime import datetime, timedelta, timezone
 
 # --- 1. ページ設定と自動更新 ---
 st.set_page_config(page_title="Lecture System", layout="wide", page_icon="📊")
@@ -153,6 +154,8 @@ else:
         comment_text = st.text_input("質問・コメント")
         submitted = st.form_submit_button("送信")
         if submitted and comment_text:
-            now = datetime.now().strftime("%H:%M")
+            # 日本時間で時刻を生成
+            JST = timezone(timedelta(hours=+9), 'JST')
+            now = datetime.now(JST).strftime("%H:%M")
             shared_data['comments'].append({"time": now, "text": comment_text})
             st.success("コメントを送信しました。")
