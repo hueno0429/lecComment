@@ -2,6 +2,8 @@
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime
+import qrcode
+from io import BytesIO
 
 # --- 1. ページ設定と自動更新 ---
 st.set_page_config(page_title="Lecture System", layout="wide", page_icon="📊")
@@ -27,6 +29,18 @@ view = query_params.get("view", "")
 
 if "is_logged_in" not in st.session_state:
     st.session_state["is_logged_in"] = False
+
+# --- QRコード生成関数を追加 ---
+def generate_qr(url):
+    qr = qrcode.QRCode(box_size=10, border=2)
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
 
 # --- 4. メインロジック ---
 
@@ -71,6 +85,15 @@ elif view == "admin":
     if st.session_state["is_logged_in"]:
         st.success("ログイン済み")
         
+
+    # サイドバーや画面端にQRコードを表示
+        with st.expander("📱 スマホで参加（QRコード）"):
+            # 現在のURLをQRコード化
+            current_url = "https://leccom.streamlit.app/" # ここにURLを記入
+            qr_img = generate_qr(current_url)
+            st.image(qr_img, caption="このコードをスキャンして投稿", width=200)
+    
+
         # 公開状態の切り替え
         new_status = st.toggle("公開状態を切り替える", value=shared_data['status'])
         shared_data['status'] = new_status
@@ -99,6 +122,14 @@ else:
         st.stop()
         
     st.title("❓ 講義コメント")
+
+# サイドバーや画面端にQRコードを表示
+    with st.expander("📱 スマホで参加（QRコード）"):
+        # 現在のURLを自動取得してQRコード化
+        current_url = "https://leccom.streamlit.app/" # ここに実際のURLを記入
+        qr_img = generate_qr(current_url)
+        st.image(qr_img, caption="このコードをスキャンして投稿", width=200)
+    
     st.write("今の理解度を教えてください。")
     
     c1, c2 = st.columns(2)
@@ -118,4 +149,3 @@ else:
             now = datetime.now().strftime("%H:%M")
             shared_data['comments'].append({"time": now, "text": comment_text})
             st.success("コメントを送信しました。")
-            
