@@ -53,7 +53,7 @@ if view == "monitor":
         st.warning("ログインが必要です。管理者画面からログインしてください。")
         st.stop()
     
-    st.title("📊 講義リアルタイム統計")
+    st.subheader("📊 講義リアルタイム統計")
     st.write(f"公開状態: {'🟢 公開中' if shared_data['status'] else '🔴 非公開'}")
     
     col1, col2 = st.columns(2)
@@ -61,7 +61,7 @@ if view == "monitor":
     col2.metric("🤔 よくわからない", f"{shared_data['bad_count']} 人")
     
     st.divider()
-    st.subheader("📝 届いている全コメント")
+    st.markdown("#### 📝 届いている全コメント")
     if shared_data['comments']:
         # 最新のコメントを上に表示
         for msg_item in reversed(shared_data['comments']):
@@ -75,13 +75,14 @@ if view == "monitor":
 
 # --- 【B. 管理者画面】 ---
 elif view == "admin":
-    st.title("🛠 管理者設定パネル")
+    st.subheader("🛠 管理者設定パネル")
     
     # --- 安全なパスワード取得 ---
     try:
-        correct_password = st.secrets.get("admin_password", "Henoheno2236")
+        # Secretsから取得、なければデフォルトを使用
+        correct_password = st.secrets.get("admin_password", "password")
     except Exception:
-        correct_password = "Henoheno2236"
+        correct_password = "password"
 
     if not st.session_state["is_logged_in"]:
         pwd = st.text_input("パスワードを入力してください", type="password")
@@ -97,25 +98,43 @@ elif view == "admin":
         st.success("ログイン済み")
 
         # --- データダウンロード ---
-        st.subheader("💾 データのバックアップ")
-        if shared_data['comments']:
-            df = pd.DataFrame(shared_data['comments'])
-            csv = df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+        st.markdown("#### 💾 データのバックアップ")
+
+        # 日本時間の設定（ここで定義することでNameErrorを防ぎます）
+        JST = timezone(timedelta(hours=+9), 'JST')
+ 
+        if shared_data['comments'] or shared_data['good_count'] > 0 or shared_data['bad_count'] > 0:
             
-            # 日本時間でのファイル名作成（インポート済み前提）
-            fname = f"lecture_comments_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+            # 1. コメントのデータフレームを作成
+            df_comments = pd.DataFrame(shared_data['comments'])
+            
+            # 2. 合計カウント用のデータフレームを作成（1行の表）
+            df_counts = pd.DataFrame([{
+                "項目": "合計カウント",
+                "👍 よくわかる": shared_data['good_count'],
+                "🤔 よくわからない": shared_data['bad_count'],
+                "時刻": datetime.now(JST).strftime("%Y-%m-%d %H:%M")
+            }])
+            
+            # 3. 2つの表を連結（上にカウント、下にコメント一覧）
+            df_export = pd.concat([df_counts, df_comments], axis=0, ignore_index=True)
+            
+            # CSVデータを生成（Excelの日本語文字化け対策 UTF-8-SIG）
+            csv = df_export.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+            
+            # ファイル名に現在時刻を付与
+            fname = f"lecture_summary_{datetime.now(JST).strftime('%Y%m%d_%H%M')}.csv"
             
             st.download_button(
-                label="📩 全コメントをCSVでダウンロード",
+                label="📩 統計とコメントをCSVでダウンロード",
                 data=csv,
                 file_name=fname,
                 mime='text/csv',
             )
         else:
-            st.write("保存できるコメントはまだありません。")
+            st.write("保存できるデータはまだありません。")
 
         st.divider()
-
         # --- QRコード表示 ---
         with st.expander("📱 スマホで参加（QRコード）"):
             current_url = "https://leccomment.streamlit.app/" 
@@ -123,7 +142,7 @@ elif view == "admin":
             st.image(qr_img, caption="このコードをスキャンして投稿", width=200)
 
         # --- ステータス管理 ---
-        st.subheader("⚙️ 講義コントロール")
+        st.markdown("#### ⚙️ 講義コントロール")
         
         # 公開状態
         shared_data['status'] = st.toggle("公開状態（学生が投稿できるか）", value=shared_data['status'])
@@ -150,11 +169,11 @@ elif view == "admin":
 # --- 【C. 学生用入力画面】 ---
 else:
     if not shared_data['status']:
-        st.title("🔴 現在、受付停止中です")
+        st.subheader("🔴 現在、受付停止中です")
         st.write("講義が開始されるまでお待ちください。")
         st.stop()
         
-    st.title("❓ 講義コメント")
+    st.subheader("❓ 講義コメント")
 
 # サイドバーや画面端にQRコードを表示
     with st.expander("📱 スマホで参加（QRコード）"):
