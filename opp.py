@@ -6,6 +6,7 @@ import qrcode
 from io import BytesIO
 import streamlit as st
 from datetime import datetime, timedelta, timezone
+import pandas as pd
 
 # --- 1. ページ設定と自動更新 ---
 st.set_page_config(page_title="Lecture System", layout="wide", page_icon="📊")
@@ -75,51 +76,75 @@ if view == "monitor":
 # --- 【B. 管理者画面】 ---
 elif view == "admin":
     st.title("🛠 管理者設定パネル")
+    
+    # --- 安全なパスワード取得 ---
+    try:
+        correct_password = st.secrets.get("admin_password", "Henoheno2236")
+    except Exception:
+        correct_password = "Henoheno2236"
+
     if not st.session_state["is_logged_in"]:
         pwd = st.text_input("パスワードを入力してください", type="password")
         if st.button("ログイン"):
-            # Streamlit Cloudの設定画面から読み込む
-            if "admin_password" in st.secrets:
-                correct_password = st.secrets["admin_password"]
-            else:
-                # ローカル実行時や設定忘れの際のバックアップ
-                correct_password = "password"
             if pwd == correct_password:
                 st.session_state["is_logged_in"] = True
                 st.rerun()
             else:
                 st.error("パスワードが違います。")
     
+    # ログイン後の表示
     if st.session_state["is_logged_in"]:
         st.success("ログイン済み")
-        
 
-    # サイドバーや画面端にQRコードを表示
+        # --- データダウンロード ---
+        st.subheader("💾 データのバックアップ")
+        if shared_data['comments']:
+            df = pd.DataFrame(shared_data['comments'])
+            csv = df.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
+            
+            # 日本時間でのファイル名作成（インポート済み前提）
+            fname = f"lecture_comments_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+            
+            st.download_button(
+                label="📩 全コメントをCSVでダウンロード",
+                data=csv,
+                file_name=fname,
+                mime='text/csv',
+            )
+        else:
+            st.write("保存できるコメントはまだありません。")
+
+        st.divider()
+
+        # --- QRコード表示 ---
         with st.expander("📱 スマホで参加（QRコード）"):
-            # 現在のURLをQRコード化
-            current_url = "https://leccomment.streamlit.app/" # ここにURLを記入
+            current_url = "https://leccomment.streamlit.app/" 
             qr_img = generate_qr(current_url)
             st.image(qr_img, caption="このコードをスキャンして投稿", width=200)
-    
 
-        # 公開状態の切り替え
-        new_status = st.toggle("公開状態を切り替える", value=shared_data['status'])
-        shared_data['status'] = new_status
+        # --- ステータス管理 ---
+        st.subheader("⚙️ 講義コントロール")
         
+        # 公開状態
+        shared_data['status'] = st.toggle("公開状態（学生が投稿できるか）", value=shared_data['status'])
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📈 統計画面へ", use_container_width=True):
+                st.query_params.update(view="monitor")
+                st.rerun()
+        with col2:
+            if st.button("🚪 ログアウト", use_container_width=True):
+                st.session_state["is_logged_in"] = False
+                st.rerun()
+
         st.divider()
-        if st.button("🗑 データをリセット（カウントとコメントを消去）"):
+        # リセットボタン（誤操作防止のため赤色に）
+        if st.button("🗑 データをリセット（全消去）", type="primary"):
             shared_data['good_count'] = 0
             shared_data['bad_count'] = 0
             shared_data['comments'] = []
-            st.success("リセットしました")
-            st.rerun()
-            
-        if st.button("📈 リアルタイム統計ページを開く"):
-            st.query_params.update(view="monitor")
-            st.rerun()
-        
-        if st.button("ログアウト"):
-            st.session_state["is_logged_in"] = False
+            st.success("すべてのデータを消去しました")
             st.rerun()
 
 # --- 【C. 学生用入力画面】 ---
@@ -134,7 +159,7 @@ else:
 # サイドバーや画面端にQRコードを表示
     with st.expander("📱 スマホで参加（QRコード）"):
         # 現在のURLを自動取得してQRコード化
-        current_url = "https://leccomment.streamlit.app/" # ここに実際のURLを記入
+        current_url = "https://leccomment.streamlit.app/" # 実際のURL
         qr_img = generate_qr(current_url)
         st.image(qr_img, caption="このコードをスキャンして投稿", width=200)
     
