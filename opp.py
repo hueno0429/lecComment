@@ -1,59 +1,25 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
-from streamlit_gsheets import GSheetsConnection
-import pandas as pd
+from datetime import datetime
 
 # --- 1. ページ設定と自動更新 ---
 st.set_page_config(page_title="Lecture System", layout="wide", page_icon="📊")
+# 5秒ごとに画面を更新
 st_autorefresh(interval=5000, key="datarefresh")
 
-# --- 2. スプレッドシート接続 ---
-URL = "https://docs.google.com/spreadsheets/d/1rJBb19fJkxVnX69zzxVhBqUiXABFEQzPhihN1-0Fe-Y/edit?usp=sharing"
-CSV_URL_SHEET1="https://docs.google.com/spreadsheets/d/e/2PACX-1vTgFq_RKoaymkDWQ1K0vQwykNyQ3yJLnpJgy-wr4Rek8b613obbQiOhUhkqoYC1PBpStlNyYv3xCYju/pub?gid=0&single=true&output=csv"
-CSV_URL_COMMENT="https://docs.google.com/spreadsheets/d/e/2PACX-1vTgFq_RKoaymkDWQ1K0vQwykNyQ3yJLnpJgy-wr4Rek8b613obbQiOhUhkqoYC1PBpStlNyYv3xCYju/pub?gid=1407702637&single=true&output=csv"
+# --- 2. ローカルメモリ（全ユーザー共有）のデータ管理 ---
+# st.cache_resource を使うと、全ブラウザ・全ユーザーで同じ変数を共有できます
+@st.cache_resource
+def get_shared_data():
+    return {
+        "status": True,      # 公開・非公開状態
+        "good_count": 0,     # よくわかる
+        "bad_count": 0,      # よくわからない
+        "comments": []       # コメントリスト
+    }
 
-import time
-
-def get_data():
-    # 前回の値を保持するための変数を準備（データが空の時に0にならないようにする）
-    if "last_data" not in st.session_state:
-        st.session_state.last_data = (False, 0, 0, [])
-
-    try:
-        # キャッシュを回避するためにURLの末尾に現在の秒数を追加
-        t = int(time.time())
-        
-        # sheet1 (ステータスとカウント) の読み込み
-        df_status = pd.read_csv(f"{CSV_URL_SHEET1}&cache_bust={t}", header=None)
-        
-        if not df_status.empty:
-            val = str(df_status.iloc[0, 0]).strip().upper()
-            status = (val == "TRUE")
-            
-            # 数字が読み取れなかったら前回の値を使う
-            good_count = int(df_status.iloc[0, 1]) if df_status.shape[1] > 1 else st.session_state.last_data[1]
-            bad_count = int(df_status.iloc[0, 2]) if df_status.shape[1] > 2 else st.session_state.last_data[2]
-        else:
-            status, good_count, bad_count = st.session_state.last_data[0:3]
-
-        # comment (コメント一覧) の読み込み
-        df_comments = pd.read_csv(f"{CSV_URL_COMMENT}&cache_bust={t}", header=None)
-        
-        if not df_comments.empty:
-            comments = df_comments.iloc[:, 0].dropna().astype(str).tolist()
-        else:
-            comments = st.session_state.last_data[3]
-            
-        # 成功したデータを保存しておく
-        st.session_state.last_data = (status, good_count, bad_count, comments)
-        return status, good_count, bad_count, comments
-
-    except Exception as e:
-        # エラーが起きたら前回の成功データを返す（画面が0にならない）
-        return st.session_state.last_data
-
-current_status, good_val, bad_val, all_comments = get_data()
+shared_data = get_shared_data()
 
 # --- 3. URLパラメータとログイン判定 ---
 query_params = st.query_params
@@ -64,26 +30,33 @@ if "is_logged_in" not in st.session_state:
 
 # --- 4. メインロジック ---
 
+# --- 【A. 統計モニター画面】 ---
 if view == "monitor":
     if not st.session_state["is_logged_in"]:
         st.warning("ログインが必要です。管理者画面からログインしてください。")
         st.stop()
+    
     st.title("📊 講義リアルタイム統計")
-    st.write(f"公開状態: {'🟢 公開中' if current_status else '🔴 非公開'}")
+    st.write(f"公開状態: {'🟢 公開中' if shared_data['status'] else '🔴 非公開'}")
+    
     col1, col2 = st.columns(2)
-    col1.metric("👍 よくわかる", f"{good_val} 人")
-    col2.metric("🤔 よくわからない", f"{bad_val} 人")
+    col1.metric("👍 よくわかる", f"{shared_data['good_count']} 人")
+    col2.metric("🤔 よくわからない", f"{shared_data['bad_count']} 人")
+    
     st.divider()
     st.subheader("📝 届いている全コメント")
-    if all_comments:
-        for msg in reversed(all_comments):
-            st.info(msg)
+    if shared_data['comments']:
+        # 最新のコメントを上に表示
+        for msg_item in reversed(shared_data['comments']):
+            st.info(f"[{msg_item['time']}] {msg_item['text']}")
     else:
         st.write("まだコメントはありません。")
+    
     if st.button("管理者メニューに戻る"):
         st.query_params.update(view="admin")
         st.rerun()
 
+# --- 【B. 管理者画面】 ---
 elif view == "admin":
     st.title("🛠 管理者設定パネル")
     if not st.session_state["is_logged_in"]:
@@ -94,33 +67,55 @@ elif view == "admin":
                 st.rerun()
             else:
                 st.error("パスワードが違います。")
+    
     if st.session_state["is_logged_in"]:
         st.success("ログイン済み")
-        st.write(f"現在の公開状態: {'🟢 公開中' if current_status else '🔴 非公開'}")
+        
+        # 公開状態の切り替え
+        new_status = st.toggle("公開状態を切り替える", value=shared_data['status'])
+        shared_data['status'] = new_status
+        
         st.divider()
-        st.write(f"👉 [スプレッドシートを編集する]({URL})")
+        if st.button("🗑 データをリセット（カウントとコメントを消去）"):
+            shared_data['good_count'] = 0
+            shared_data['bad_count'] = 0
+            shared_data['comments'] = []
+            st.success("リセットしました")
+            st.rerun()
+            
         if st.button("📈 リアルタイム統計ページを開く"):
             st.query_params.update(view="monitor")
             st.rerun()
+        
         if st.button("ログアウト"):
             st.session_state["is_logged_in"] = False
             st.rerun()
 
+# --- 【C. 学生用入力画面】 ---
 else:
-    if not current_status:
+    if not shared_data['status']:
+        st.title("🔴 現在、受付停止中です")
+        st.write("講義が開始されるまでお待ちください。")
         st.stop()
+        
     st.title("❓ 講義コメント")
-    st.write("反応ボタンを押してください。")
+    st.write("今の理解度を教えてください。")
+    
     c1, c2 = st.columns(2)
-    c1.button("👍 よくわかる", use_container_width=True)
-    c2.button("🤔 よくわからない", use_container_width=True)
+    if c1.button("👍 よくわかる", use_container_width=True):
+        shared_data['good_count'] += 1
+        st.toast("「よくわかる」を送信しました！")
+        
+    if c2.button("🤔 よくわからない", use_container_width=True):
+        shared_data['bad_count'] += 1
+        st.toast("「よくわからない」を送信しました。")
+        
     st.divider()
-    st.text_input("質問・コメント")
-    st.button("送信")
-
-
-
-
-
-
-
+    with st.form("comment_form", clear_on_submit=True):
+        comment_text = st.text_input("質問・コメント")
+        submitted = st.form_submit_button("送信")
+        if submitted and comment_text:
+            now = datetime.now().strftime("%H:%M")
+            shared_data['comments'].append({"time": now, "text": comment_text})
+            st.success("コメントを送信しました。")
+            
