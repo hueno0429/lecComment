@@ -96,7 +96,7 @@ elif view == "admin":
     # サイドバーや画面端にQRコードを表示
         with st.expander("📱 スマホで参加（QRコード）"):
             # 現在のURLをQRコード化
-            current_url = "https://leccom.streamlit.app/" # ここにURLを記入
+            current_url = "https://leccomment.streamlit.app/" # ここにURLを記入
             qr_img = generate_qr(current_url)
             st.image(qr_img, caption="このコードをスキャンして投稿", width=200)
     
@@ -133,7 +133,7 @@ else:
 # サイドバーや画面端にQRコードを表示
     with st.expander("📱 スマホで参加（QRコード）"):
         # 現在のURLを自動取得してQRコード化
-        current_url = "https://leccom.streamlit.app/" # ここに実際のURLを記入
+        current_url = "https://leccomment.streamlit.app/" # ここに実際のURLを記入
         qr_img = generate_qr(current_url)
         st.image(qr_img, caption="このコードをスキャンして投稿", width=200)
     
