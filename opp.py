@@ -4,6 +4,7 @@ from streamlit_autorefresh import st_autorefresh
 from datetime import datetime
 import qrcode
 from io import BytesIO
+import streamlit as st
 
 # --- 1. ページ設定と自動更新 ---
 st.set_page_config(page_title="Lecture System", layout="wide", page_icon="📊")
@@ -76,7 +77,13 @@ elif view == "admin":
     if not st.session_state["is_logged_in"]:
         pwd = st.text_input("パスワードを入力してください", type="password")
         if st.button("ログイン"):
-            if pwd == "Henoheno2236":
+            # Streamlit Cloudの設定画面から読み込む
+            if "admin_password" in st.secrets:
+                correct_password = st.secrets["admin_password"]
+            else:
+                # ローカル実行時や設定忘れの際のバックアップ
+                correct_password = "password"
+            if pwd == correct_password:
                 st.session_state["is_logged_in"] = True
                 st.rerun()
             else:
