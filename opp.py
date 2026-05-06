@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
+
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime
 import qrcode
 from io import BytesIO
-import streamlit as st
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 # --- 1. ページ設定と自動更新 ---
 st.set_page_config(page_title="Lecture System", layout="wide", page_icon="📊")
+
 # 5秒ごとに画面を更新
 st_autorefresh(interval=5000, key="datarefresh")
 
@@ -18,10 +19,11 @@ st_autorefresh(interval=5000, key="datarefresh")
 @st.cache_resource
 def get_shared_data():
     return {
-        "status": True,      # 公開・非公開状態
-        "good_count": 0,     # よくわかる
-        "bad_count": 0,      # よくわからない
-        "comments": []       # コメントリスト
+        "status": True,        # 公開・非公開状態
+        "good_count": 0,       # よくわかる
+        "bad_count": 0,        # よくわからない
+        "comments": [],        # コメントリスト
+        "is_logged_in": False  # ログイン状態（ブラウザの戻るボタン対策）
     }
 
 shared_data = get_shared_data()
@@ -30,36 +32,31 @@ shared_data = get_shared_data()
 query_params = st.query_params
 view = query_params.get("view", "")
 
-if "is_logged_in" not in st.session_state:
-    st.session_state["is_logged_in"] = False
-
 # --- QRコード生成関数を追加 ---
 def generate_qr(url):
     qr = qrcode.QRCode(box_size=10, border=2)
     qr.add_data(url)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
-    
     buf = BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
-
 
 # --- 4. メインロジック ---
 
 # --- 【A. 統計モニター画面】 ---
 if view == "monitor":
-    if not st.session_state["is_logged_in"]:
+    if not shared_data["is_logged_in"]:
         st.warning("ログインが必要です。管理者画面からログインしてください。")
         st.stop()
-    
+
     st.subheader("📊 講義リアルタイム統計")
     st.write(f"公開状態: {'🟢 公開中' if shared_data['status'] else '🔴 非公開'}")
-    
+
     col1, col2 = st.columns(2)
     col1.metric("👍 よくわかる", f"{shared_data['good_count']} 人")
     col2.metric("🤔 よくわからない", f"{shared_data['bad_count']} 人")
-    
+
     st.divider()
     st.markdown("#### 📝 届いている全コメント")
     if shared_data['comments']:
@@ -68,7 +65,7 @@ if view == "monitor":
             st.info(f"[{msg_item['time']}] {msg_item['text']}")
     else:
         st.write("まだコメントはありません。")
-    
+
     if st.button("管理者メニューに戻る"):
         st.query_params.update(view="admin")
         st.rerun()
@@ -76,55 +73,42 @@ if view == "monitor":
 # --- 【B. 管理者画面】 ---
 elif view == "admin":
     st.subheader("🛠 管理者設定パネル")
-    
+
     # --- 安全なパスワード取得 ---
     try:
-        # Secretsから取得、なければデフォルトを使用
         correct_password = st.secrets.get("admin_password", "password")
     except Exception:
         correct_password = "password"
 
-    if not st.session_state["is_logged_in"]:
+    if not shared_data["is_logged_in"]:
         pwd = st.text_input("パスワードを入力してください", type="password")
         if st.button("ログイン"):
             if pwd == correct_password:
-                st.session_state["is_logged_in"] = True
+                shared_data["is_logged_in"] = True
                 st.rerun()
             else:
                 st.error("パスワードが違います。")
-    
+
     # ログイン後の表示
-    if st.session_state["is_logged_in"]:
+    if shared_data["is_logged_in"]:
         st.success("ログイン済み")
 
         # --- データダウンロード ---
         st.markdown("#### 💾 データのバックアップ")
 
-        # 日本時間の設定（ここで定義することでNameErrorを防ぎます）
         JST = timezone(timedelta(hours=+9), 'JST')
- 
+
         if shared_data['comments'] or shared_data['good_count'] > 0 or shared_data['bad_count'] > 0:
-            
-            # 1. コメントのデータフレームを作成
             df_comments = pd.DataFrame(shared_data['comments'])
-            
-            # 2. 合計カウント用のデータフレームを作成（1行の表）
             df_counts = pd.DataFrame([{
                 "項目": "合計カウント",
                 "👍 よくわかる": shared_data['good_count'],
                 "🤔 よくわからない": shared_data['bad_count'],
                 "時刻": datetime.now(JST).strftime("%Y-%m-%d %H:%M")
             }])
-            
-            # 3. 2つの表を連結（上にカウント、下にコメント一覧）
             df_export = pd.concat([df_counts, df_comments], axis=0, ignore_index=True)
-            
-            # CSVデータを生成（Excelの日本語文字化け対策 UTF-8-SIG）
             csv = df_export.to_csv(index=False, encoding='utf-8-sig').encode('utf-8-sig')
-            
-            # ファイル名に現在時刻を付与
             fname = f"lecture_summary_{datetime.now(JST).strftime('%Y%m%d_%H%M')}.csv"
-            
             st.download_button(
                 label="📩 統計とコメントをCSVでダウンロード",
                 data=csv,
@@ -135,18 +119,17 @@ elif view == "admin":
             st.write("保存できるデータはまだありません。")
 
         st.divider()
+
         # --- QRコード表示 ---
         with st.expander("📱 スマホで参加（QRコード）"):
-            current_url = "https://leccomment.streamlit.app/" 
+            current_url = "https://leccomment.streamlit.app/"
             qr_img = generate_qr(current_url)
             st.image(qr_img, caption="このコードをスキャンして投稿", width=200)
 
         # --- ステータス管理 ---
         st.markdown("#### ⚙️ 講義コントロール")
-        
-        # 公開状態
         shared_data['status'] = st.toggle("公開状態（学生が投稿できるか）", value=shared_data['status'])
-        
+
         col1, col2 = st.columns(2)
         with col1:
             if st.button("📈 統計画面へ", use_container_width=True):
@@ -154,11 +137,11 @@ elif view == "admin":
                 st.rerun()
         with col2:
             if st.button("🚪 ログアウト", use_container_width=True):
-                st.session_state["is_logged_in"] = False
+                shared_data["is_logged_in"] = False
                 st.rerun()
 
         st.divider()
-        # リセットボタン（誤操作防止のため赤色に）
+
         if st.button("🗑 データをリセット（全消去）", type="primary"):
             shared_data['good_count'] = 0
             shared_data['bad_count'] = 0
@@ -172,33 +155,29 @@ else:
         st.subheader("🔴 現在、受付停止中です")
         st.write("講義が開始されるまでお待ちください。")
         st.stop()
-        
+
     st.subheader("❓ 講義コメント")
 
-# サイドバーや画面端にQRコードを表示
     with st.expander("📱 スマホで参加（QRコード）"):
-        # 現在のURLを自動取得してQRコード化
-        current_url = "https://leccomment.streamlit.app/" # 実際のURL
+        current_url = "https://leccomment.streamlit.app/"
         qr_img = generate_qr(current_url)
         st.image(qr_img, caption="このコードをスキャンして投稿", width=200)
-    
+
     st.write("今の理解度を教えてください。")
-    
     c1, c2 = st.columns(2)
     if c1.button("👍 よくわかる", use_container_width=True):
         shared_data['good_count'] += 1
         st.toast("「よくわかる」を送信しました！")
-        
     if c2.button("🤔 よくわからない", use_container_width=True):
         shared_data['bad_count'] += 1
         st.toast("「よくわからない」を送信しました。")
-        
+
     st.divider()
+
     with st.form("comment_form", clear_on_submit=True):
         comment_text = st.text_input("質問・コメント")
         submitted = st.form_submit_button("送信")
         if submitted and comment_text:
-            # 日本時間で時刻を生成
             JST = timezone(timedelta(hours=+9), 'JST')
             now = datetime.now(JST).strftime("%H:%M")
             shared_data['comments'].append({"time": now, "text": comment_text})
